@@ -78,11 +78,16 @@ export default function AdminNetwork() {
       {/* Warning Alert */}
       <Alert variant="destructive">
         <AlertCircle className="h-4 w-4" />
-        <AlertTitle>Warning</AlertTitle>
+        <AlertTitle>⚠️ Critical: Testnet Limitations</AlertTitle>
         <AlertDescription>
-          Switching networks will affect all new coin deployments. Existing coins will remain on their original network.
-          <br />
-          <strong className="mt-2 block">Mainnet uses real ETH and incurs real costs!</strong>
+          <strong className="block mb-2">Base Sepolia (Testnet) has NO trading functionality:</strong>
+          <ul className="list-disc list-inside space-y-1 ml-2">
+            <li>❌ Coins cannot be traded</li>
+            <li>❌ Liquidity pools do not work</li>
+            <li>❌ Rewards are not distributed</li>
+            <li>❌ Zora protocol features are disabled</li>
+          </ul>
+          <strong className="block mt-2">Use Base Mainnet for full functionality and real testing.</strong>
         </AlertDescription>
       </Alert>
 
@@ -212,6 +217,26 @@ export default function AdminNetwork() {
                   <td className="py-2 px-4 text-muted-foreground">Recommended For</td>
                   <td className="py-2 px-4">Development, Testing</td>
                   <td className="py-2 px-4">Production, Live Trading</td>
+                </tr>
+                <tr className="border-b bg-red-50/50 dark:bg-red-950/20">
+                  <td className="py-2 px-4 text-muted-foreground font-semibold">🚨 Trading Works?</td>
+                  <td className="py-2 px-4 text-red-600 font-semibold">❌ NO (Disabled)</td>
+                  <td className="py-2 px-4 text-green-600 font-semibold">✅ YES (Full Protocol)</td>
+                </tr>
+                <tr className="border-b bg-red-50/50 dark:bg-red-950/20">
+                  <td className="py-2 px-4 text-muted-foreground font-semibold">Pool System</td>
+                  <td className="py-2 px-4 text-red-600 font-semibold">❌ NO</td>
+                  <td className="py-2 px-4 text-green-600 font-semibold">✅ YES (Uniswap V4)</td>
+                </tr>
+                <tr className="border-b bg-red-50/50 dark:bg-red-950/20">
+                  <td className="py-2 px-4 text-muted-foreground font-semibold">Rewards</td>
+                  <td className="py-2 px-4 text-red-600 font-semibold">❌ NO</td>
+                  <td className="py-2 px-4 text-green-600 font-semibold">✅ YES (Distributed)</td>
+                </tr>
+                <tr className="border-b bg-red-50/50 dark:bg-red-950/20">
+                  <td className="py-2 px-4 text-muted-foreground font-semibold">Zora Features</td>
+                  <td className="py-2 px-4 text-red-600 font-semibold">❌ Limited</td>
+                  <td className="py-2 px-4 text-green-600 font-semibold">✅ Full</td>
                 </tr>
               </tbody>
             </table>

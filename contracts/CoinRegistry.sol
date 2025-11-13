@@ -106,15 +106,18 @@ contract CoinRegistry {
      * @param creators Array of creator addresses
      * @param zoraContracts Array of Zora contract addresses
      * @param txHashes Array of transaction hashes
+     * @param createdAtTimestamps Array of original coin creation timestamps
      */
     function batchRegister(
         address[] calldata creators,
         address[] calldata zoraContracts,
-        bytes32[] calldata txHashes
+        bytes32[] calldata txHashes,
+        uint256[] calldata createdAtTimestamps
     ) external onlyPlatform whenNotPaused {
         require(
             creators.length == zoraContracts.length && 
-            creators.length == txHashes.length,
+            creators.length == txHashes.length &&
+            creators.length == createdAtTimestamps.length,
             "Array length mismatch"
         );
         require(creators.length > 0, "Empty arrays");
@@ -126,10 +129,12 @@ contract CoinRegistry {
             address creator = creators[i];
             address zoraContract = zoraContracts[i];
             bytes32 txHash = txHashes[i];
+            uint256 createdAt = createdAtTimestamps[i];
 
             require(creator != address(0), "Invalid creator");
             require(zoraContract != address(0), "Invalid contract");
             require(_isContract(zoraContract), "Not a contract");
+            require(createdAt > 0 && createdAt <= block.timestamp, "Invalid creation timestamp");
             
             // Skip if already registered (don't revert to allow partial batches)
             if (registry[zoraContract].creator != address(0)) {
@@ -139,7 +144,7 @@ contract CoinRegistry {
             registry[zoraContract] = CoinRegistration({
                 creator: creator,
                 zoraContract: zoraContract,
-                timestamp: block.timestamp,
+                timestamp: createdAt,  // ✅ Use original creation time, not batch time
                 txHash: txHash
             });
 
@@ -152,7 +157,7 @@ contract CoinRegistry {
             totalCoins++;
             successCount++;
 
-            emit CoinRegistered(creator, zoraContract, block.timestamp, txHash);
+            emit CoinRegistered(creator, zoraContract, createdAt, txHash);
         }
 
         emit BatchRegistered(successCount, block.timestamp);

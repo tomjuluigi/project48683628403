@@ -113,25 +113,36 @@ const COIN_PAIR_MAX_DISCOVERY_SUPPLY_SHARE = parseUnits("0.05", 18); // 5%
 
 /**
  * Encode pool configuration based on network
- * - Base Sepolia: ZORA token pairing (only supported option)
- * - Base Mainnet: ZORA token pairing (recommended, same as production coins)
+ * - Base Sepolia (84532): ZORA token pairing (testnet)
+ * - Base Mainnet (8453): ZORA token pairing (production)
+ * 
+ * Both networks use ZORA as the paired currency for consistency.
+ * Rewards are automatically converted to ZORA on trades, so using ZORA
+ * as the pairing currency eliminates unnecessary conversion fees.
  */
 function encodePoolConfig(chainId: number): `0x${string}` {
   const version = 4; // Version 4 is current
   
-  // Use ZORA token pairing for both networks (Base Sepolia requires it, Base Mainnet uses it for consistency)
+  // Use ZORA for all networks
   const currency = ZORA_ADDRESS;
+  
+  if (chainId === base.id) {
+    console.log(`✅ Base Mainnet (${chainId}): Using ZORA as paired currency (production)`);
+  } else {
+    console.log(`🧪 Base Sepolia (${chainId}): Using ZORA as paired currency (testnet)`);
+  }
+  
+  console.log(`📊 Tick range: ${ZORA_COIN_PAIR_LOWER_TICK} to ${ZORA_COIN_PAIR_UPPER_TICK}`);
+  console.log(`💰 Rewards: Automatically converted to ZORA on trades (no conversion slippage)`);
+
   const lowerTick = ZORA_COIN_PAIR_LOWER_TICK;
   const upperTick = ZORA_COIN_PAIR_UPPER_TICK;
-
-  console.log(`🔧 Using ZORA as paired currency for chain ${chainId}`);
-  console.log(`📊 Tick range: ${lowerTick} to ${upperTick}`);
 
   return encodeAbiParameters(
     parseAbiParameters('uint8, address, int24[], int24[], uint16[], uint256[]'),
     [
       version,                                       // version (uint8)
-      currency,                                      // currency (ZORA token)
+      currency,                                      // currency (ETH on mainnet, ZORA on sepolia)
       [lowerTick],                                   // tickLower (int24[])
       [upperTick],                                   // tickUpper (int24[])
       [COIN_PAIR_NUM_DISCOVERY_POSITIONS],          // numDiscoveryPositions (uint16[])
@@ -156,7 +167,9 @@ export interface CreateCoinResult {
 }
 
 /**
- * Creates a coin on Base Sepolia using DIRECT CONTRACT CALL (no SDK)
+ * Creates a coin using DIRECT CONTRACT CALLS
+ * Supports both Base Mainnet and Base Sepolia via network preference
+ * Uses ZORA as the backing currency for all networks
  * 
  * @param params - Coin creation parameters
  * @param walletClient - Viem wallet client for signing transactions
@@ -175,8 +188,10 @@ export async function createCoinOnBaseSepolia(
   // Check network preference from localStorage (set by admin)
   const networkPreference = localStorage.getItem('ADMIN_NETWORK_PREFERENCE') as 'sepolia' | 'mainnet' | null;
   const chainId = networkPreference === 'mainnet' ? base.id : baseSepolia.id;
+  const isMainnet = chainId === base.id;
 
-  console.log(`📡 Using network: ${networkPreference === 'mainnet' ? 'Base Mainnet' : 'Base Sepolia'} (Chain ID: ${chainId})`);
+  console.log(`📡 Using network: ${isMainnet ? 'Base Mainnet' : 'Base Sepolia'} (Chain ID: ${chainId})`);
+  console.log(`💰 Pairing currency: ZORA (consistent across all networks)`);
 
   // Check ZORA token balance for the creator wallet
   const ERC20_ABI = [{
@@ -199,14 +214,11 @@ export async function createCoinOnBaseSepolia(
     console.log("💰 ZORA balance:", zoraBalance.toString());
 
     if (zoraBalance === BigInt(0)) {
-      throw new Error(
-        `❌ No ZORA tokens available!\n\n` +
-        `Your wallet ${params.creator} needs ZORA tokens to create a coin on Base Sepolia.\n\n` +
-        `Please get test ZORA tokens from:\n` +
-        `🔗 https://bridge.zora.energy/ (Bridge from Ethereum Sepolia)\n` +
-        `🔗 Or use a faucet to get Sepolia ETH first, then bridge to ZORA\n\n` +
-        `Note: Gasless deployment still requires ZORA tokens as the pool backing currency.`
-      );
+      const message = isMainnet
+        ? `❌ No ZORA tokens available!\n\nYour wallet ${params.creator} needs ZORA tokens to create a coin.\n\nGet ZORA on Base Mainnet from:\n🔗 https://www.uniswap.org/ (swap ETH for ZORA)\n🔗 Or bridge from mainnet Ethereum`
+        : `❌ No ZORA tokens available!\n\nYour wallet ${params.creator} needs ZORA tokens to create a coin on Base Sepolia.\n\nGet test ZORA tokens from:\n🔗 https://bridge.zora.energy/ (Bridge from Ethereum Sepolia)\n🔗 Or use a faucet to get Sepolia ETH first, then bridge to ZORA`;
+      
+      throw new Error(message);
     }
 
     // Generate deterministic salt using stable parameters

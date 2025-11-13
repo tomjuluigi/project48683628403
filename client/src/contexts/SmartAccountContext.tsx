@@ -6,6 +6,7 @@ import { createSmartAccountClient } from 'permissionless';
 import { toSimpleSmartAccount } from 'permissionless/accounts';
 import type { SmartAccountClient } from 'permissionless';
 import { entryPoint07Address } from 'viem/account-abstraction';
+import { createPimlicoClient } from 'permissionless/clients/pimlico';
 
 const ENTRYPOINT_ADDRESS_V07 = entryPoint07Address;
 
@@ -74,12 +75,16 @@ export function SmartAccountProvider({ children }: SmartAccountProviderProps) {
       // Get network preference
       const networkPreference = localStorage.getItem('ADMIN_NETWORK_PREFERENCE') as 'sepolia' | 'mainnet' | null;
       const chain = networkPreference === 'mainnet' ? base : baseSepolia;
+      const pimlicoApiKey = import.meta.env.VITE_PIMLICO_API_KEY;
       const paymasterUrl = networkPreference === 'mainnet'
-        ? `https://api.developer.coinbase.com/rpc/v1/base/${import.meta.env.VITE_COINBASE_PAYMASTER_API_KEY}`
-        : `https://api.developer.coinbase.com/rpc/v1/base-sepolia/${import.meta.env.VITE_COINBASE_PAYMASTER_API_KEY}`;
+        ? `https://api.pimlico.io/v2/base/rpc?apikey=${pimlicoApiKey}`
+        : `https://api.pimlico.io/v2/base-sepolia/rpc?apikey=${pimlicoApiKey}`;
+      const bundlerUrl = networkPreference === 'mainnet'
+        ? `https://api.pimlico.io/v2/base/rpc?apikey=${pimlicoApiKey}`
+        : `https://api.pimlico.io/v2/base-sepolia/rpc?apikey=${pimlicoApiKey}`;
 
       console.log(`🔐 Initializing smart account on ${chain.name}...`);
-      console.log("📡 Using Base Paymaster RPC:", paymasterUrl);
+      console.log("📡 Using Pimlico Paymaster:", networkPreference === 'mainnet' ? 'Base Mainnet' : 'Base Sepolia');
 
       // Create public client for the chain
       const publicClient = createPublicClient({
@@ -117,20 +122,18 @@ export function SmartAccountProvider({ children }: SmartAccountProviderProps) {
 
       console.log('✅ Smart account created:', account.address);
 
-      // Create smart account client with Base Paymaster
+      // Create Pimlico paymaster client
+      const pimlicoPaymaster = createPimlicoClient({
+        transport: http(paymasterUrl),
+        entryPoint: ENTRYPOINT_ADDRESS_V07,
+      });
+
+      // Create smart account client with Pimlico Paymaster
       const client = createSmartAccountClient({
         account,
         chain,
-        bundlerTransport: http(paymasterUrl),
-        paymaster: {
-          getPaymasterData: async (userOperation: any) => {
-            // Base Paymaster handles paymaster data automatically via RPC
-            return {
-              paymaster: undefined,
-              paymasterData: '0x',
-            };
-          },
-        },
+        bundlerTransport: http(bundlerUrl),
+        paymaster: pimlicoPaymaster,
         userOperation: {
           estimateFeesPerGas: async () => {
             const fees = await publicClient.estimateFeesPerGas();
